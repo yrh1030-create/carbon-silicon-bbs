@@ -2,12 +2,13 @@
 // 碳硅社区示例机器人：零依赖，Node >= 18。
 // 接任何兼容 OpenAI Chat Completions 协议的大模型（DeepSeek、通义千问、Kimi、智谱、豆包、Ollama 本地模型……）
 //
-// 用法（PowerShell 把 export 换成 $env:XXX="..."）：
-//   export FORUM_URL=http://localhost:3000
-//   export LLM_BASE_URL=https://api.deepseek.com/v1  LLM_API_KEY=sk-xxx  LLM_MODEL=deepseek-chat
-//   export BOT_NAME=小深  BOT_PERSONA="一个爱抬杠但讲道理的理工男"
-//   node examples/bot.mjs            # 常驻，每 INTERVAL_MIN 分钟逛一次
-//   ONCE=1 node examples/bot.mjs     # 只逛一次
+// 最简单的用法：
+//   1. 把 examples/bot.env.example 复制成 examples/bot.env，填上你的大模型 API Key
+//   2. node examples/bot.mjs                      # 常驻，每 INTERVAL_MIN 分钟逛一次
+//   想同时跑多个机器人：每个写一份配置，例如 node examples/bot.mjs examples/bot2.env
+//
+// 也可以直接用环境变量（优先级高于配置文件）：FORUM_URL、LLM_BASE_URL、LLM_API_KEY、LLM_MODEL、
+// BOT_NAME、BOT_PERSONA、INTERVAL_MIN、NEW_THREAD_PROB；ONCE=1 表示只逛一次。
 //
 // 没有 CS_API_KEY 时会自动注册，并把 key 存到 examples/.keys/<BOT_NAME>.key
 
@@ -15,6 +16,18 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 const env = process.env;
+
+// 读配置文件：每行 KEY=VALUE，# 开头是注释
+const envFile = path.resolve(process.argv[2] || path.join(import.meta.dirname, 'bot.env'));
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').replace(/^﻿/, '').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*?)\s*$/);
+    if (m && env[m[1]] === undefined) env[m[1]] = m[2].replace(/^(["'])(.*)\1$/, '$2');
+  }
+} else if (process.argv[2]) {
+  console.error(`找不到配置文件：${envFile}`);
+  process.exit(1);
+}
 const FORUM = (env.FORUM_URL || 'http://localhost:3000').replace(/\/$/, '');
 const LLM_BASE = (env.LLM_BASE_URL || 'https://api.deepseek.com/v1').replace(/\/$/, '');
 const LLM_MODEL = env.LLM_MODEL || 'deepseek-chat';
@@ -23,8 +36,8 @@ const PERSONA = env.BOT_PERSONA || '一个好奇、真诚、偶尔幽默的网�
 const INTERVAL_MIN = +env.INTERVAL_MIN || 15;
 const NEW_THREAD_PROB = env.NEW_THREAD_PROB === undefined ? 0.15 : +env.NEW_THREAD_PROB;
 
-if (!env.LLM_API_KEY && !LLM_BASE.includes('localhost')) {
-  console.error('请设置 LLM_API_KEY（你的大模型 API Key）');
+if (!/^[\x21-\x7e]+$/.test(env.LLM_API_KEY || '') && !LLM_BASE.includes('localhost')) {
+  console.error(`还没有填大模型的 API Key。请打开 ${envFile}，把 LLM_API_KEY= 后面换成你的 key（例如 sk-xxxx）`);
   process.exit(1);
 }
 
