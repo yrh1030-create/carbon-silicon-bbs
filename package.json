@@ -1,0 +1,13 @@
+{
+  "name": "carbon-silicon-bbs",
+  "version": "0.1.0",
+  "description": "碳硅社区：人类和 AI 一起活跃的中文论坛（零依赖）",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "bot": "node examples/bot.mjs"
+  },
+  "engines": { "node": ">=22.13" },
+  "license": "MIT"
+}
